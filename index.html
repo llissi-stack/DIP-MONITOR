@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Legislativo - Buscador de Votaciones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f8fafc; }
+        /* Clases para las pestañas activas/inactivas */
+        .tab-btn { transition: all 0.2s; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { color: #64748b; }
+        .tab-inactive:hover { color: #0f172a; }
+        /* Colores de votos */
+        .vote-Afirmativo { color: #166534; background-color: #dcfce7; }
+        .vote-Negativo { color: #991b1b; background-color: #fee2e2; }
+        .vote-Ausente { color: #854d0e; background-color: #fef08a; }
+        .vote-Abstencion { color: #475569; background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="max-w-5xl mx-auto pt-12 px-4 pb-20">
+        <header class="mb-10 text-center">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Monitor Legislativo</h1>
+            <p class="text-slate-500 mb-6">Transparencia y análisis de la labor parlamentaria</p>
+            
+            <div class="relative max-w-2xl mx-auto">
+                <input type="text" id="searchInput" placeholder="Buscar diputado/a (Ej: Recalde, Hector)..." 
+                       class="w-full px-5 py-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <button onclick="buscarDiputado()" class="absolute right-2 top-2 bg-slate-900 text-white px-5 py-1.5 rounded-lg hover:bg-slate-800 transition">
+                    Buscar
+                </button>
+            </div>
+        </header>
+
+        <div id="resultados" class="hidden">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 flex justify-between items-center">
+                <div>
+                    <h2 id="dipNombre" class="text-2xl font-bold text-slate-900 uppercase"></h2>
+                    <div class="flex gap-3 mt-2 text-sm font-medium">
+                        <span id="dipBloque" class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100"></span>
+                        <span id="dipProvincia" class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-b border-slate-200 mb-6 flex overflow-x-auto gap-6" id="tabs">
+                <button onclick="cambiarTab('mandatos')" class="tab-btn tab-active pb-3 whitespace-nowrap" id="btn-mandatos">Mandatos</button>
+                <button onclick="cambiarTab('alineamiento')" class="tab-btn tab-inactive pb-3 whitespace-nowrap" id="btn-alineamiento">Alineamiento Político</button>
+                <button onclick="cambiarTab('lealtad')" class="tab-btn tab-inactive pb-3 whitespace-nowrap" id="btn-lealtad">Lealtad Partidaria</button>
+                <button onclick="cambiarTab('votos_anuales')" class="tab-btn tab-inactive pb-3 whitespace-nowrap" id="btn-votos_anuales">Votos por Año</button>
+                <button onclick="cambiarTab('leyes')" class="tab-btn tab-inactive pb-3 whitespace-nowrap" id="btn-leyes">Leyes Destacadas</button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 min-h-[400px]">
+                
+                <div id="tab-mandatos" class="tab-content block">
+                    <h3 class="text-lg font-semibold mb-4">Períodos Legislativos</h3>
+                    <ul id="listaMandatos" class="space-y-3"></ul>
+                </div>
+
+                <div id="tab-alineamiento" class="tab-content hidden w-full">
+                    <h3 class="text-lg font-semibold mb-4 text-center">Coincidencia en votaciones con otros bloques</h3>
+                    <div class="h-80 w-full"><canvas id="chartAlineamiento"></canvas></div>
+                </div>
+
+                <div id="tab-lealtad" class="tab-content hidden w-full">
+                    <h3 class="text-lg font-semibold mb-4 text-center">Evolución de alineamiento con bloque propio (%)</h3>
+                    <div class="h-80 w-full"><canvas id="chartLealtad"></canvas></div>
+                </div>
+
+                <div id="tab-votos_anuales" class="tab-content hidden w-full">
+                    <h3 class="text-lg font-semibold mb-4 text-center">Historial de asistencia y sentido del voto</h3>
+                    <div class="h-80 w-full"><canvas id="chartVotos"></canvas></div>
+                </div>
+
+                <div id="tab-leyes" class="tab-content hidden">
+                    <h3 class="text-lg font-semibold mb-4">Votaciones Relevantes</h3>
+                    <div id="listaLeyes" class="space-y-4"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="noResult" class="hidden text-center py-12 text-slate-500">
+            <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p class="text-lg">No se encontraron resultados para esa búsqueda.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE DE DATOS SIMULADA ---
+        // Cuando implementemos GitHub Actions, borraremos esto y usaremos 'fetch(datos_legislativos.json)'
+        const dbSimulada = {
+            "ultima_actualizacion": "2026-04-22",
+            "diputados": [
+                {
+                    "nombre_oficial": "RECALDE, HECTOR PEDRO",
+                    "provincia": "Buenos Aires",
+                    "bloque": "Frente para la Victoria - PJ",
+                    "mandatos": ["2005-2009", "2009-2013", "2013-2017"],
+                    "alineamiento_bloques": {
+                        "Frente para la Victoria": 98,
+                        "Peronismo Federal": 45,
+                        "Frente de Izquierda": 30,
+                        "UCR": 15,
+                        "PRO": 12
+                    },
+                    "lealtad_anual": { "2014": 99, "2015": 98, "2016": 95, "2017": 97 },
+                    "votos_anuales": {
+                        "2015": { afirmativo: 60, negativo: 10, ausente: 2 },
+                        "2016": { afirmativo: 45, negativo: 30, ausente: 5 },
+                        "2017": { afirmativo: 30, negativo: 40, ausente: 10 }
+                    },
+                    "leyes_destacadas": [
+                        { proyecto: "Modificación Ley de Riesgos de Trabajo (Ley 27.348)", fecha: "15/02/2017", sentido: "Negativo" },
+                        { proyecto: "Ley de Pago a los Fondos Buitre", fecha: "16/03/2016", sentido: "Negativo" },
+                        { proyecto: "Ley de Solidaridad Previsional", fecha: "12/11/2015", sentido: "Afirmativo" }
+                    ]
+                }
+            ]
+        };
+
+        // Variables para guardar las instancias de los gráficos y poder destruirlas al buscar de nuevo
+        let chartAlign = null, chartLoyalty = null, chartVotes = null;
+        let legisladorActual = null;
+
+        // --- FUNCIONALIDAD DE BÚSQUEDA ---
+        function buscarDiputado() {
+            const input = document.getElementById('searchInput').value.toUpperCase().trim();
+            const resultadosDiv = document.getElementById('resultados');
+            const noResultDiv = document.getElementById('noResult');
+            
+            // Simula la búsqueda en nuestra DB
+            legisladorActual = dbSimulada.diputados.find(d => d.nombre_oficial.includes(input));
+
+            if (legisladorActual && input !== "") {
+                // Llenar encabezado
+                document.getElementById('dipNombre').innerText = legisladorActual.nombre_oficial;
+                document.getElementById('dipBloque').innerText = legisladorActual.bloque;
+                document.getElementById('dipProvincia').innerText = legisladorActual.provincia;
+
+                // Cargar datos en las pestañas
+                cargarMandatos();
+                cargarLeyes();
+                
+                // Mostrar resultados y resetear a la primera pestaña
+                resultadosDiv.classList.remove('hidden');
+                noResultDiv.classList.add('hidden');
+                cambiarTab('mandatos');
+            } else {
+                resultadosDiv.classList.add('hidden');
+                noResultDiv.classList.remove('hidden');
+            }
+        }
+
+        // Permitir búsqueda al presionar "Enter"
+        document.getElementById("searchInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") buscarDiputado();
+        });
+
+        // --- SISTEMA DE PESTAÑAS ---
+        function cambiarTab(tabId) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden', 'block'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.replace('block', 'hidden'));
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById('tab-' + tabId).classList.replace('hidden', 'block');
+
+            // Actualizar estilos de los botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
+            });
+            document.getElementById('btn-' + tabId).classList.remove('tab-inactive');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+
+            // Renderizar el gráfico correspondiente solo cuando se abre la pestaña (para evitar bugs visuales)
+            if (tabId === 'alineamiento') renderChartAlineamiento();
+            if (tabId === 'lealtad') renderChartLealtad();
+            if (tabId === 'votos_anuales') renderChartVotos();
+        }
+
+        // --- RENDERIZADO DE DATOS HTML ---
+        function cargarMandatos() {
+            const lista = document.getElementById('listaMandatos');
+            lista.innerHTML = '';
+            legisladorActual.mandatos.forEach(mandato => {
+                lista.innerHTML += `<li class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                    <span class="font-medium">Período: ${mandato}</span>
+                </li>`;
+            });
+        }
+
+        function cargarLeyes() {
+            const lista = document.getElementById('listaLeyes');
+            lista.innerHTML = '';
+            legisladorActual.leyes_destacadas.forEach(ley => {
+                lista.innerHTML += `
+                    <div class="flex justify-between items-center p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition">
+                        <div>
+                            <h4 class="font-bold text-slate-800">${ley.proyecto}</h4>
+                            <p class="text-sm text-slate-500">${ley.fecha}</p>
+                        </div>
+                        <span class="px-3 py-1 text-sm font-semibold rounded-full vote-${ley.sentido}">${ley.sentido}</span>
+                    </div>`;
+            });
+        }
+
+        // --- RENDERIZADO DE GRÁFICOS (Chart.js) ---
+        function renderChartAlineamiento() {
+            if (chartAlign) chartAlign.destroy();
+            const ctx = document.getElementById('chartAlineamiento').getContext('2d');
+            const data = legisladorActual.alineamiento_bloques;
+            
+            chartAlign = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: '% de Coincidencia',
+                        data: Object.values(data),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+            });
+        }
+
+        function renderChartLealtad() {
+            if (chartLoyalty) chartLoyalty.destroy();
+            const ctx = document.getElementById('chartLealtad').getContext('2d');
+            const data = legisladorActual.lealtad_anual;
+
+            chartLoyalty = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Lealtad al bloque (%)',
+                        data: Object.values(data),
+                        borderColor: '#0f172a',
+                        backgroundColor: 'rgba(15, 23, 42, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
+            });
+        }
+
+        function renderChartVotos() {
+            if (chartVotes) chartVotes.destroy();
+            const ctx = document.getElementById('chartVotos').getContext('2d');
+            const years = Object.keys(legisladorActual.votos_anuales);
+            const afirmativos = years.map(y => legisladorActual.votos_anuales[y].afirmativo);
+            const negativos = years.map(y => legisladorActual.votos_anuales[y].negativo);
+            const ausentes = years.map(y => legisladorActual.votos_anuales[y].ausente);
+
+            chartVotes =
