@@ -1,0 +1,93 @@
+{
+    "ultima_actualizacion": "2026-04-22 19:58:28",
+    "diputados": [
+        {
+            "nombre_oficial": "RECALDE, HECTOR PEDRO",
+            "provincia": "Buenos Aires",
+            "bloque": "Frente para la Victoria - PJ",
+            "mandatos": [
+                "2005-2009",
+                "2009-2013",
+                "2013-2017"
+            ],
+            "alineamiento_bloques": {
+                "Frente para la Victoria": 98,
+                "Peronismo Federal": 45,
+                "Frente de Izquierda": 30,
+                "UCR": 15,
+                "PRO": 12
+            },
+            "lealtad_anual": {
+                "2014": 99,
+                "2015": 98,
+                "2016": 95,
+                "2017": 97
+            },
+            "votos_anuales": {
+                "2015": {
+                    "afirmativo": 60,
+                    "negativo": 10,
+                    "ausente": 2
+                },
+                "2016": {
+                    "afirmativo": 45,
+                    "negativo": 30,
+                    "ausente": 5
+                },
+                "2017": {
+                    "afirmativo": 30,
+                    "negativo": 40,
+                    "ausente": 10
+                }
+            },
+            "leyes_destacadas": [
+                {
+                    "proyecto": "Modificación Ley de Riesgos de Trabajo",
+                    "fecha": "15/02/2017",
+                    "sentido": "Negativo"
+                },
+                {
+                    "proyecto": "Ley de Pago a los Fondos Buitre",
+                    "fecha": "16/03/2016",
+                    "sentido": "Negativo"
+                }
+            ]
+        },
+        {
+            "nombre_oficial": "HERRERA AHUAD, OSCAR",
+            "provincia": "Misiones",
+            "bloque": "Innovación Federal",
+            "mandatos": [
+                "2025-2029"
+            ],
+            "alineamiento_bloques": {
+                "Innovación Federal": 100,
+                "PRO": 65,
+                "Unión por la Patria": 40
+            },
+            "lealtad_anual": {
+                "2025": 100,
+                "2026": 95
+            },
+            "votos_anuales": {
+                "2025": {
+                    "afirmativo": 40,
+                    "negativo": 5,
+                    "ausente": 1
+                },
+                "2026": {
+                    "afirmativo": 15,
+                    "negativo": 2,
+                    "ausente": 0
+                }
+            },
+            "leyes_destacadas": [
+                {
+                    "proyecto": "Ley de Presupuesto 2026",
+                    "fecha": "15/04/2026",
+                    "sentido": "Afirmativo"
+                }
+            ]
+        }
+    ]
+}
