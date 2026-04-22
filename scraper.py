@@ -1,0 +1,66 @@
+import json
+from datetime import datetime
+
+def extraer_y_procesar_datos():
+    print("Iniciando la extracción de datos legislativos...")
+    
+    # Aquí en el futuro nos conectaremos a https://votaciones.hcdn.gob.ar/
+    # Por ahora, estructuramos los datos exactamente como los necesita el Frontend
+    
+    datos = {
+        "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "diputados": [
+            {
+                "nombre_oficial": "RECALDE, HECTOR PEDRO",
+                "provincia": "Buenos Aires",
+                "bloque": "Frente para la Victoria - PJ",
+                "mandatos": ["2005-2009", "2009-2013", "2013-2017"],
+                "alineamiento_bloques": {
+                    "Frente para la Victoria": 98,
+                    "Peronismo Federal": 45,
+                    "Frente de Izquierda": 30,
+                    "UCR": 15,
+                    "PRO": 12
+                },
+                "lealtad_anual": { "2014": 99, "2015": 98, "2016": 95, "2017": 97 },
+                "votos_anuales": {
+                    "2015": { "afirmativo": 60, "negativo": 10, "ausente": 2 },
+                    "2016": { "afirmativo": 45, "negativo": 30, "ausente": 5 },
+                    "2017": { "afirmativo": 30, "negativo": 40, "ausente": 10 }
+                },
+                "leyes_destacadas": [
+                    { "proyecto": "Modificación Ley de Riesgos de Trabajo", "fecha": "15/02/2017", "sentido": "Negativo" },
+                    { "proyecto": "Ley de Pago a los Fondos Buitre", "fecha": "16/03/2016", "sentido": "Negativo" }
+                ]
+            },
+            {
+                "nombre_oficial": "HERRERA AHUAD, OSCAR",
+                "provincia": "Misiones",
+                "bloque": "Innovación Federal",
+                "mandatos": ["2025-2029"],
+                "alineamiento_bloques": {
+                    "Innovación Federal": 100,
+                    "PRO": 65,
+                    "Unión por la Patria": 40
+                },
+                "lealtad_anual": { "2025": 100, "2026": 95 },
+                "votos_anuales": {
+                    "2025": { "afirmativo": 40, "negativo": 5, "ausente": 1 },
+                    "2026": { "afirmativo": 15, "negativo": 2, "ausente": 0 }
+                },
+                "leyes_destacadas": [
+                    { "proyecto": "Ley de Presupuesto 2026", "fecha": "15/04/2026", "sentido": "Afirmativo" }
+                ]
+            }
+        ]
+    }
+
+    # Guardamos esta información en un archivo JSON
+    nombre_archivo = 'datos_legislativos.json'
+    with open(nombre_archivo, 'w', encoding='utf-8') as archivo:
+        json.dump(datos, archivo, ensure_ascii=False, indent=4)
+        
+    print(f"¡Éxito! Archivo '{nombre_archivo}' actualizado correctamente.")
+
+if __name__ == "__main__":
+    extraer_y_procesar_datos()
