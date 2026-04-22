@@ -1,6 +1,6 @@
 import pandas as pd
 import json
-import requests
+import cloudscraper  # Importamos la nueva herramienta antibloqueos
 from datetime import datetime
 import io
 
@@ -9,26 +9,31 @@ def extraer_datos_reales():
     url_acta = "https://votaciones.hcdn.gob.ar/votacion/6342"
     
     try:
-        # 1. Le ponemos un "disfraz" (User-Agent) para que la página no bloquee al robot
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        # 1. Creamos un "navegador fantasma" indetectable
+        print("Configurando evasión de firewall...")
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
         
-        print(f"Descargando acta: {url_acta}")
-        respuesta = requests.get(url_acta, headers=headers)
+        print(f"Descargando acta: {url_acta}...")
+        # Usamos el scraper avanzado en lugar del requests básico
+        respuesta = scraper.get(url_acta)
         
-        # Si la página nos bloquea, esto fuerza a que el programa tire un error y nos avise
+        # Verificamos si la descarga fue exitosa
         respuesta.raise_for_status() 
         
-        # 2. Leemos las tablas desde el texto HTML descargado
+        # 2. Leemos la tabla HTML
         print("Leyendo la tabla de votos...")
-        # io.StringIO evita una advertencia técnica de la librería pandas
         tablas = pd.read_html(io.StringIO(respuesta.text))
         df_votos = tablas[0]
         
         perfiles_armados = {}
 
-        # 3. Procesamos fila por fila
+        # 3. Procesamos los votos
         for index, fila in df_votos.iterrows():
             nombre = str(fila.get('Diputado', '')).strip().upper()
             bloque = str(fila.get('Bloque', '')).strip()
@@ -70,11 +75,10 @@ def extraer_datos_reales():
         with open('datos_legislativos.json', 'w', encoding='utf-8') as archivo:
             json.dump(datos_finales, archivo, ensure_ascii=False, indent=4)
             
-        print(f"¡Éxito! Se guardaron los perfiles de {len(perfiles_armados)} diputados.")
+        print(f"¡Éxito total! Se guardaron los perfiles de {len(perfiles_armados)} diputados.")
 
     except Exception as e:
         print(f"Error CRÍTICO al intentar extraer los datos: {e}")
-        # Hacemos que el script falle "ruidosamente" para que GitHub nos avise si algo sale mal
         raise e
 
 if __name__ == "__main__":
