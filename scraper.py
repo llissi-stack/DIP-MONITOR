@@ -1,34 +1,34 @@
+from playwright.sync_api import sync_playwright
 import pandas as pd
 import json
-import cloudscraper  # Importamos la nueva herramienta antibloqueos
 from datetime import datetime
 import io
 
 def extraer_datos_reales():
-    print("Iniciando extracción desde votaciones.hcdn.gob.ar...")
+    print("Iniciando extracción con Navegador Real (Playwright)...")
     url_acta = "https://votaciones.hcdn.gob.ar/votacion/6342"
     
     try:
-        # 1. Creamos un "navegador fantasma" indetectable
-        print("Configurando evasión de firewall...")
-        scraper = cloudscraper.create_scraper(
-            browser={
-                'browser': 'chrome',
-                'platform': 'windows',
-                'desktop': True
-            }
-        )
-        
-        print(f"Descargando acta: {url_acta}...")
-        # Usamos el scraper avanzado en lugar del requests básico
-        respuesta = scraper.get(url_acta)
-        
-        # Verificamos si la descarga fue exitosa
-        respuesta.raise_for_status() 
-        
-        # 2. Leemos la tabla HTML
+        # 1. Abrimos un Google Chrome invisible
+        with sync_playwright() as p:
+            print("Abriendo Chrome...")
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            
+            print(f"Navegando a {url_acta}...")
+            # Le damos hasta 60 segundos por si la página del gob es lenta
+            page.goto(url_acta, timeout=60000)
+            
+            # Esperamos 2 segundos para asegurarnos de que la tabla cargó en pantalla
+            page.wait_for_timeout(2000)
+            
+            print("Extrayendo el código de la página...")
+            html_puro = page.content()
+            browser.close()
+
+        # 2. Le pasamos el código extraído a Pandas
         print("Leyendo la tabla de votos...")
-        tablas = pd.read_html(io.StringIO(respuesta.text))
+        tablas = pd.read_html(io.StringIO(html_puro))
         df_votos = tablas[0]
         
         perfiles_armados = {}
