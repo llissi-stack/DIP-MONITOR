@@ -1,66 +1,75 @@
+import pandas as pd
 import json
 from datetime import datetime
 
-def extraer_y_procesar_datos():
-    print("Iniciando la extracción de datos legislativos...")
+def extraer_datos_reales():
+    print("Iniciando extracción desde votaciones.hcdn.gob.ar...")
     
-    # Aquí en el futuro nos conectaremos a https://votaciones.hcdn.gob.ar/
-    # Por ahora, estructuramos los datos exactamente como los necesita el Frontend
+    # ID de un acta real de prueba (Podemos programarlo para que busque las últimas 10)
+    # Por ejemplo, el ID 6342 corresponde a una votación en la HCDN
+    url_acta = "https://votaciones.hcdn.gob.ar/votacion/6342"
     
-    datos = {
-        "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "diputados": [
-            {
-                "nombre_oficial": "RECALDE, HECTOR PEDRO",
-                "provincia": "Buenos Aires",
-                "bloque": "Frente para la Victoria - PJ",
-                "mandatos": ["2005-2009", "2009-2013", "2013-2017"],
-                "alineamiento_bloques": {
-                    "Frente para la Victoria": 98,
-                    "Peronismo Federal": 45,
-                    "Frente de Izquierda": 30,
-                    "UCR": 15,
-                    "PRO": 12
-                },
-                "lealtad_anual": { "2014": 99, "2015": 98, "2016": 95, "2017": 97 },
-                "votos_anuales": {
-                    "2015": { "afirmativo": 60, "negativo": 10, "ausente": 2 },
-                    "2016": { "afirmativo": 45, "negativo": 30, "ausente": 5 },
-                    "2017": { "afirmativo": 30, "negativo": 40, "ausente": 10 }
-                },
-                "leyes_destacadas": [
-                    { "proyecto": "Modificación Ley de Riesgos de Trabajo", "fecha": "15/02/2017", "sentido": "Negativo" },
-                    { "proyecto": "Ley de Pago a los Fondos Buitre", "fecha": "16/03/2016", "sentido": "Negativo" }
-                ]
-            },
-            {
-                "nombre_oficial": "HERRERA AHUAD, OSCAR",
-                "provincia": "Misiones",
-                "bloque": "Innovación Federal",
-                "mandatos": ["2025-2029"],
-                "alineamiento_bloques": {
-                    "Innovación Federal": 100,
-                    "PRO": 65,
-                    "Unión por la Patria": 40
-                },
-                "lealtad_anual": { "2025": 100, "2026": 95 },
-                "votos_anuales": {
-                    "2025": { "afirmativo": 40, "negativo": 5, "ausente": 1 },
-                    "2026": { "afirmativo": 15, "negativo": 2, "ausente": 0 }
-                },
-                "leyes_destacadas": [
-                    { "proyecto": "Ley de Presupuesto 2026", "fecha": "15/04/2026", "sentido": "Afirmativo" }
-                ]
-            }
-        ]
-    }
-
-    # Guardamos esta información en un archivo JSON
-    nombre_archivo = 'datos_legislativos.json'
-    with open(nombre_archivo, 'w', encoding='utf-8') as archivo:
-        json.dump(datos, archivo, ensure_ascii=False, indent=4)
+    try:
+        # 1. Pandas lee mágicamente la tabla HTML de la página de la cámara
+        print(f"Leyendo acta: {url_acta}")
+        tablas = pd.read_html(url_acta)
         
-    print(f"¡Éxito! Archivo '{nombre_archivo}' actualizado correctamente.")
+        # La tabla de votos suele ser la primera que aparece en la página
+        df_votos = tablas[0]
+        
+        perfiles_armados = {}
+
+        # 2. Iteramos sobre cada fila de la tabla (cada voto de un diputado)
+        for index, fila in df_votos.iterrows():
+            # Limpiamos los textos
+            nombre = str(fila.get('Diputado', '')).strip().upper()
+            bloque = str(fila.get('Bloque', '')).strip()
+            provincia = str(fila.get('Provincia', '')).strip()
+            sentido_voto = str(fila.get('Voto', '')).strip().capitalize()
+            
+            if not nombre or nombre == 'NAN':
+                continue
+                
+            # Si el diputado no está en nuestro diccionario, lo creamos
+            if nombre not in perfiles_armados:
+                perfiles_armados[nombre] = {
+                    "nombre_oficial": nombre,
+                    "provincia": provincia,
+                    "bloque": bloque,
+                    "mandatos": ["Actual"], # Esto lo podemos pulir luego cruzando bases
+                    "alineamiento_bloques": {"Bloque Propio": 100}, # Placeholder temporal
+                    "lealtad_anual": {"2026": 100},
+                    "votos_anuales": {
+                        "2026": {"afirmativo": 0, "negativo": 0, "ausente": 0, "abstencion": 0}
+                    },
+                    "leyes_destacadas": []
+                }
+            
+            # Contamos su voto anual
+            if sentido_voto in ['Afirmativo', 'Negativo', 'Ausente', 'Abstencion']:
+                perfiles_armados[nombre]["votos_anuales"]["2026"][sentido_voto.lower()] += 1
+            
+            # Agregamos esta ley a sus leyes destacadas
+            perfiles_armados[nombre]["leyes_destacadas"].append({
+                "proyecto": "Acta 6342 (Ejemplo)",
+                "fecha": datetime.now().strftime("%d/%m/%Y"),
+                "sentido": sentido_voto
+            })
+
+        # 3. Convertimos el diccionario en el formato que espera nuestro index.html
+        datos_finales = {
+            "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "diputados": list(perfiles_armados.values())
+        }
+
+        # 4. Guardamos el archivo JSON
+        with open('datos_legislativos.json', 'w', encoding='utf-8') as archivo:
+            json.dump(datos_finales, archivo, ensure_ascii=False, indent=4)
+            
+        print("¡Extracción y procesamiento completados exitosamente!")
+
+    except Exception as e:
+        print(f"Error al intentar extraer los datos: {e}")
 
 if __name__ == "__main__":
-    extraer_y_procesar_datos()
+    extraer_datos_reales()
